@@ -66,37 +66,37 @@ def maxline():
 
 #Maximum variable length
 def maxvar():
-    max_var_len = 0
-    for token in tokens:
-        if token.type == tokenize.NAME and not keyword.iskeyword(token.string):
-            cur_var_len_1 = len(token.string)
-            max_var_len = max(max_var_len, cur_var_len_1)
-    return f"Maximum variable length = {max_var_len}"
+    max_var_len = 0 # Initialize a variable to store the maximum variable length
+    for token in tokens: # Iterate through each token in the tokens list
+        if token.type == tokenize.NAME and not keyword.iskeyword(token.string):  # Check if the token is a variable name (not a keyword)
+            cur_var_len_1 = len(token.string)  # Calculate the length of the variable name
+            max_var_len = max(max_var_len, cur_var_len_1) # Update the maximum variable length if the current variable is longer
+    return f"Maximum variable length = {max_var_len}"  # Return a string stating the maximum variable length
 
 #Minimum variable length
 def minvar():
-    min_var_len = float("inf")
-    for token in tokens:
-        if token.type == tokenize.NAME and not keyword.iskeyword(token.string):
-            cur_var_len_2 = len(token.string)
-            min_var_len = min(min_var_len, cur_var_len_2)
-    return f"Minimum variable length = {min_var_len}"
+    min_var_len = float("inf") # Set it to infinity initially to ensure that any variable length will be smaller
+    for token in tokens: # Iterate through each token in the tokens list
+        if token.type == tokenize.NAME and not keyword.iskeyword(token.string):  # Check if the token is a variable name (not a keyword)
+            cur_var_len_2 = len(token.string) # Calculate the length of the variable name
+            min_var_len = min(min_var_len, cur_var_len_2) # Update the minimum variable length if the current variable is shorter
+    return f"Minimum variable length = {min_var_len}" # Return a string stating the minimum variable length
 
 #Number of comment lines
 def numcom():
-    n_com = 0
-    for token in tokens:
-        if token.type == tokenize.COMMENT:
-            n_com += 1
-    return f"Number of comment lines = {n_com}"
+    n_com = 0 # Initialize a variable to count the number of comments
+    for token in tokens: # Iterate through each token in the tokens list
+        if token.type == tokenize.COMMENT: # Check if the token is a comment
+            n_com += 1 # Increment the comment count
+    return f"Number of comment lines = {n_com}" # Return a string stating the number of comment lines
 
 #Number of definitions
 def numdef():
-    def_count = 0
-    for token in tokens:
-        if token.type == tokenize.NAME and token.string in ("def",):
-            def_count += 1
-    return f"Number of definitions = {def_count}"
+    def_count = 0  # Initialize a variable to count the number of function definitions
+    for token in tokens: # Iterate through each token in the tokens list
+        if token.type == tokenize.NAME and token.string in ("def",): # Check if the token is the keyword 'def' which is used to define functions in Python
+            def_count += 1 # Increment the definition count
+    return f"Number of definitions = {def_count}"  # Return a string stating the number of function definitions
 
 #Number of strings
 def numstr():
@@ -108,11 +108,11 @@ def numstr():
 
 #Number of numbers
 def numnum():
-    num_count = 0
-    for token in tokens:
-        if token.type == tokenize.NUMBER:
-            num_count += 1
-    return f"Number of numbers = {num_count}"
+    num_count = 0 # Initialize a variable to count the number of string literals
+    for token in tokens: # Iterate through each token in the tokens list
+        if token.type == tokenize.NUMBER: # Check if the token is a string literal
+            num_count += 1  # Increment the string count
+    return f"Number of numbers = {num_count}"  # Return a string stating the number of string literals
 
 #Number of repeated constants
 def numrep():
@@ -141,11 +141,11 @@ with tokenize.open(sys.argv[1]) as file:
         numnum(),
         numrep(),
     ]
-    stat_output = "</ul>\n"
-    for s in stats_list:
-        stat_output += "<li>" + s + "</li>\n"
+    stat_output = "</ul>\n" # Initialize a string to hold the HTML output for a list of statistics
+    for s in stats_list: # Iterate through each statistic in the stats_list
+        stat_output += "<li>" + s + "</li>\n" # Append an HTML list item element containing the statistic to the output string
     
 
-    
+# Format the HTML template with the statistics list and an empty code section
 html_output = HTML_TEMPLATE.format(stats = stat_output + "</ui>", code = "")
 print(html_output)

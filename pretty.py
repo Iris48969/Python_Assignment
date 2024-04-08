@@ -1,7 +1,7 @@
 import tokenize
 import sys
 import keyword
-# this is a test jjjjj
+# this is a test
 HTML_TEMPLATE = """<!doctype html>
 <html lang=en>
     <head>
@@ -48,10 +48,10 @@ HTML_TEMPLATE = """<!doctype html>
 
     #Number of lines
 def numline():
-    line_count = 0
-    for token in tokens:
-        if token.start[0] > line_count:
-            n_lines = token.start[0] - 1
+    line_count = 0 # Initialize a variable to keep track of the highest line number seen so far
+    for token in tokens:# Iterate over each token in the tokens list
+        if token.start[0] > line_count: # Check if the line number of the current token is greater than the highest line number seen so far
+            n_lines = token.start[0] - 1 # Update the highest line number seen so far. Subtract 1 because line numbers in tokens start from 1, not 0.
     
     return f"Number of lines = {n_lines}"
 

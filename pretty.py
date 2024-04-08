@@ -57,12 +57,12 @@ def numline():
 
 #Maximum line length
 def maxline():
-    max_line_len = 0
-    for line in file:
-        cur_line_len = len(line.rstrip("\n\r\f\v\f "))
-        max_line_len = max(max_line_len, cur_line_len)
+    max_line_len = 0 # Initialize a variable to store the maximum line length
+    for line in file:   # Iterate through each line in the file
+        cur_line_len = len(line.rstrip("\n\r\f\v\f ")) # Remove any trailing whitespace or line break characters from the line
+        max_line_len = max(max_line_len, cur_line_len) # Update the maximum line length if the current line is longer
 
-    return f"Maximum line length = {max_line_len}"
+    return f"Maximum line length = {max_line_len}"   # Return a string stating the maximum line length
 
 #Maximum variable length
 def maxvar():

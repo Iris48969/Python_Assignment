@@ -1,7 +1,7 @@
 import tokenize
 import sys
 import keyword
-# this is a test jbj
+# this is a test 
 HTML_TEMPLATE = """<!doctype html>
 <html lang=en>
     <head>

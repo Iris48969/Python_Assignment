@@ -1,7 +1,10 @@
 import tokenize
 import sys
 import keyword
-# this is a test 
+import io
+import html
+from keyword import iskeyword
+
 HTML_TEMPLATE = """<!doctype html>
 <html lang=en>
     <head>
@@ -23,129 +26,174 @@ HTML_TEMPLATE = """<!doctype html>
             <li><a href="#stats">Statistics</a></li>
             <li><a href="#code">Code</a></li>
         </ul>
-           <div id="stats">
-               <h2>Statistics</h2>
+        <div id="stats">
+            <h2>Statistics</h2>
+            <ul>
                {stats}
-           </div>
-           <div id="code">
-               <h2>Python code</h2>
-               {code}
-           </div>
+            </ul>
+        </div>
+        <div id="code">
+            <h2>Python code</h2>
+            <pre><code>{code}</pre></code>
+        </div>
     </body>
 </html>"""
 
-# if len(sys.argv) < 2:
-#     print("Usage: python script.py <filename>")
-#     sys.exit(1)
-
-# try:
-#     with tokenize.open(sys.argv[1]) as file:
-#         tokens = tokenize.generate_tokens(file.readline)
-
-# except FileNotFoundError:
-#     print(f"File '{sys.argv[1]}' not found.")
-#     sys.exit(1)
-
-    #Number of lines
-def numline():
-    line_count = 0 # Initialize a variable to keep track of the highest line number seen so far
-    for token in tokens:# Iterate over each token in the tokens list
-        if token.start[0] > line_count: # Check if the line number of the current token is greater than the highest line number seen so far
-            n_lines = token.start[0] - 1 # Update the highest line number seen so far. Subtract 1 because line numbers in tokens start from 1, not 0.
+def generate_statistics(tokens, file_content):
+    """Generate statistics based on tokens."""
+    stats = {
+        'number_of_lines': len(file_content.splitlines()),
+        'maximum_line_length': max(len(line) for line in file_content.splitlines()),
+        'maximum_variable_length': 0,
+        'minimum_variable_length': float('inf'),
+        'number_of_comment_lines': 0,
+        'number_of_definitions': 0,
+        'number_of_strings': 0,
+        'number_of_numbers': 0,
+        'number_of_repeated_constants': 0
+    }
     
-    return f"Number of lines = {n_lines}"
+    constants = {}
+    previous_token = None
 
-#Maximum line length
-def maxline():
-    max_line_len = 0 # Initialize a variable to store the maximum line length
-    for line in file:   # Iterate through each line in the file
-        cur_line_len = len(line.rstrip("\n\r\f\v\f ")) # Remove any trailing whitespace or line break characters from the line
-        max_line_len = max(max_line_len, cur_line_len) # Update the maximum line length if the current line is longer
-
-    return f"Maximum line length = {max_line_len}"   # Return a string stating the maximum line length
-
-#Maximum variable length
-def maxvar():
-    max_var_len = 0 # Initialize a variable to store the maximum variable length
-    for token in tokens: # Iterate through each token in the tokens list
-        if token.type == tokenize.NAME and not keyword.iskeyword(token.string):  # Check if the token is a variable name (not a keyword)
-            cur_var_len_1 = len(token.string)  # Calculate the length of the variable name
-            max_var_len = max(max_var_len, cur_var_len_1) # Update the maximum variable length if the current variable is longer
-    return f"Maximum variable length = {max_var_len}"  # Return a string stating the maximum variable length
-
-#Minimum variable length
-def minvar():
-    min_var_len = float("inf") # Set it to infinity initially to ensure that any variable length will be smaller
-    for token in tokens: # Iterate through each token in the tokens list
-        if token.type == tokenize.NAME and not keyword.iskeyword(token.string):  # Check if the token is a variable name (not a keyword)
-            cur_var_len_2 = len(token.string) # Calculate the length of the variable name
-            min_var_len = min(min_var_len, cur_var_len_2) # Update the minimum variable length if the current variable is shorter
-    return f"Minimum variable length = {min_var_len}" # Return a string stating the minimum variable length
-
-#Number of comment lines
-def numcom():
-    n_com = 0 # Initialize a variable to count the number of comments
-    for token in tokens: # Iterate through each token in the tokens list
-        if token.type == tokenize.COMMENT: # Check if the token is a comment
-            n_com += 1 # Increment the comment count
-    return f"Number of comment lines = {n_com}" # Return a string stating the number of comment lines
-
-#Number of definitions
-def numdef():
-    def_count = 0  # Initialize a variable to count the number of function definitions
-    for token in tokens: # Iterate through each token in the tokens list
-        if token.type == tokenize.NAME and token.string in ("def",): # Check if the token is the keyword 'def' which is used to define functions in Python
-            def_count += 1 # Increment the definition count
-    return f"Number of definitions = {def_count}"  # Return a string stating the number of function definitions
-
-#Number of strings
-def numstr():
-    str_count = 0
     for token in tokens:
-        if token.type == tokenize.STRING:
-            str_count += 1
-    return f"Number of strings = {str_count}"
+        toknum, tokval = token.type, token.string
+        if toknum == tokenize.NAME:
+            if not keyword.iskeyword(tokval):
+                stats['maximum_variable_length'] = max(stats['maximum_variable_length'], len(tokval))
+                stats['minimum_variable_length'] = min(stats['minimum_variable_length'], len(tokval))
+            elif tokval == 'def' and previous_token is not None and previous_token.type in [tokenize.INDENT, tokenize.DEDENT, tokenize.NEWLINE, tokenize.NL]:
+                
+                stats['number_of_definitions'] += 1
+        elif toknum == tokenize.COMMENT:
+            stats['number_of_comment_lines'] += 1
+        elif toknum == tokenize.STRING:
+            stats['number_of_strings'] += 1
+            constants[tokval] = constants.get(tokval, 0) + 1
+        elif toknum == tokenize.NUMBER:
+            stats['number_of_numbers'] += 1
+            constants[tokval] = constants.get(tokval, 0) + 1
+        
+        previous_token = token
 
-#Number of numbers
-def numnum():
-    num_count = 0 # Initialize a variable to count the number of string literals
-    for token in tokens: # Iterate through each token in the tokens list
-        if token.type == tokenize.NUMBER: # Check if the token is a string literal
-            num_count += 1  # Increment the string count
-    return f"Number of numbers = {num_count}"  # Return a string stating the number of string literals
+    
+    if stats['minimum_variable_length'] == float('inf'):
+        stats['minimum_variable_length'] = 0
+    
+    
+    stats['number_of_repeated_constants'] = sum(1 for count in constants.values() if count > 1)
+    
+    return stats
 
-#Number of repeated constants
-def numrep():
-    rep_set = set()  # Set to store encountered constants
-    rep_count = set()  # Set to store repeated constants
-    for token in tokens:
-        if token.type in (tokenize.STRING, tokenize.NUMBER):
-            rep = token.string # Get the string representation of the constant
-            if rep in rep_set:
-                rep_count.add(rep)  # Add the constant to repeated_constants set
+def format_statistics(stats):
+    
+    return '\n'.join(f'<li>{key.replace("_", " ").capitalize()} = {value}</li>' for key, value in stats.items())
+
+
+def apply_syntax_highlighting(file_content):
+    """Apply syntax highlighting to Python code based on tokens and preserve spaces, including line numbers and indentation."""
+    highlighted_code = ""
+    line_number = 1
+    current_line = ""  # Buffer to hold the contents of the current line
+    last_end = (1, 0)  # Initial position (line 1, column 0)
+
+    def space_needed_intext(current_start):
+        if last_end[0] == current_start[0]:  # Same line
+            space_needed = ' ' * (current_start[1] - last_end[1])
+            return space_needed
+        elif last_end[0] < current_start[0]:  # New line
+            space_needed = ' ' * (current_start[1] - 1)
+            return space_needed
+        else:
+            return ''  # Default, no space needed
+
+    tokens = tokenize.tokenize(io.BytesIO(file_content.encode('utf-8')).readline)
+    try:
+        for tok_type, tok_string, start, end, line in tokens:
+            if tok_type == tokenize.ENCODING:
+                continue  # Skip encoding declaration
+
+            # Adjust line number and handle multiline tokens
+            while line_number < start[0]:
+                highlighted_code += f'<span class="line-number">{line_number}{" "*(10-len(str(line_number)))}</span>{current_line}\n'
+                current_line = ""  # Reset current line for the new line
+                line_number += 1
+
+            # Add the calculated space needed before the token
+            space_needed = space_needed_intext(start)
+            current_line += space_needed
+
+            css_class = {
+                tokenize.COMMENT: 'comment',
+                tokenize.STRING: 'string',
+                tokenize.NUMBER: 'number',
+                tokenize.NAME: 'keyword' if keyword.iskeyword(tok_string) else 'variable',
+                tokenize.OP: 'operator'
+            }.get(tok_type, '')
+            
+            lines = tok_string.splitlines(True)
+            # Append the current token to the current line with appropriate HTML formatting
+            if '\n' in tok_string:
+                lines = tok_string.splitlines(True)
+                for i, line in enumerate(lines):
+                    line_html = html.escape(line)
+                    if i == 0:
+                        current_line += f'<span class="{css_class}">{line_html}</span>'
+                    else:
+                        highlighted_code += f'<span class="line-number">{line_number}{" "*(10-len(str(line_number)))}</span>{current_line}'
+                        current_line = f'<span class="{css_class}">{line_html}</span>'
+                        line_number += 1
             else:
-                rep_set.add(rep)
-    return f"Number of repeated constants = {len(rep_count)}"
-    
+                tok_string_escaped = html.escape(tok_string)
+                current_line += f'<span class="{css_class}">{tok_string_escaped}</span>'
 
-with tokenize.open(sys.argv[1]) as file:
-    tokens = list(tokenize.generate_tokens(file.readline))
-    stats_list = [
-        numline(),
-        maxline(),
-        maxvar(),
-        minvar(),
-        numcom(),
-        numdef(),
-        numstr(),
-        numnum(),
-        numrep(),
-    ]
-    stat_output = "</ul>\n" # Initialize a string to hold the HTML output for a list of statistics
-    for s in stats_list: # Iterate through each statistic in the stats_list
-        stat_output += "<li>" + s + "</li>\n" # Append an HTML list item element containing the statistic to the output string
-    
+            last_end = end
 
-# Format the HTML template with the statistics list and an empty code section
-html_output = HTML_TEMPLATE.format(stats = stat_output + "</ui>", code = "")
-print(html_output)
+        # Append any remaining content after the last token
+        if current_line:
+            highlighted_code += f'<span class="line-number">{line_number}{" "*(10-len(str(line_number)))}</span>{current_line}\n'
+
+    except tokenize.TokenError as e:
+        print(f"Token error: {e}")
+
+    return highlighted_code
+
+# Note: This function should be called with Python code as a string.
+# Example:
+# file_content = "your_python_code_here"
+# print(apply_syntax_highlighting(file_content))
+
+
+# generate_statistics and format_statistics functions remain the same
+def main(filename):
+    try:
+        with tokenize.open(filename) as f:
+            file_content = f.read()
+        
+        # Tokenize the file content and apply syntax highlighting
+        highlighted_code = apply_syntax_highlighting(file_content)
+
+        # Generate statistics
+        tokens = tokenize.tokenize(io.BytesIO(file_content.encode('utf-8')).readline)
+        stats = generate_statistics(list(tokens), file_content)
+        formatted_stats = format_statistics(stats)
+
+        # Generate the final HTML output
+        html_output = HTML_TEMPLATE.format(stats=formatted_stats, code=highlighted_code)
+        print(html_output)
+        
+    except FileNotFoundError:
+        print(f"Error: The file '{filename}' was not found.")
+        sys.exit(1)
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        sys.exit(1)
+
+# The rest of the script remains unchanged
+
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Usage: python script.py <filename>")
+        sys.exit(1)
+    main(sys.argv[1])
